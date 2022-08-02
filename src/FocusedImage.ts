@@ -1,202 +1,182 @@
-import { debounce } from './helpers/debounce';
-import { assign } from './helpers/assign';
-import { Focus, FocusedImageOptions } from './interfaces';
-import { CONTAINER_STYLES, ABSOLUTE_STYLES } from './sharedStyles';
+/* eslint-disable @typescript-eslint/no-unused-expressions */
+import decodeBlurHash from './decodeBlurHash.js';
 
-const IMG_STYLES = {
-  // Set these styles in case the image dimensions
-  // are smaller than the container's
-  minHeight: '100%',
-  minWidth: '100%',
-};
+const QUERY_SELECTOR = 'img[data-focus-x][data-focus-y]';
+const TRANSPARENT_PIXEL =
+  'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
-const RESIZE_LISTENER_OBJECT_STYLES = {
-  height: '100%',
-  width: '100%',
-  border: 'none',
+export interface Focus {
+  x: number;
+  y: number;
+}
 
-  // set these styles to emulate "visibility: hidden"
-  // can't use visibility because it breaks the object
-  // events in Firefox
-  opacity: 0,
-  zIndex: -1,
-  pointerEvents: 'none',
-};
-
-const DEFAULT_OPTIONS: FocusedImageOptions = {
-  debounceTime: 17,
-  updateOnWindowResize: true,
-  updateOnContainerResize: false,
-  containerPosition: 'relative',
-};
-
-export class FocusedImage {
-  focus: Focus;
-  options: FocusedImageOptions;
-  container: HTMLElement;
-  img: HTMLImageElement;
-  resizeListenerObject: HTMLObjectElement;
-  listening: boolean = false;
-  debounceApplyShift: () => void;
-
-  constructor(
-    private imageNode: HTMLImageElement,
-    options: FocusedImageOptions = {}
-  ) {
-    // Merge in options
-    this.options = assign(DEFAULT_OPTIONS, options);
-
-    // Set up element references
-    this.img = imageNode;
-    this.container = imageNode.parentElement;
-
-    // Set up instance
-    if (this.img['__focused_image_instance__']) {
-      this.img['__focused_image_instance__'].stopListening();
-      this.img.removeEventListener('load', this.applyShift);
-    }
-    this.img['__focused_image_instance__'] = this;
-
-    // Add image load event listener
-    this.img.addEventListener('load', this.applyShift);
-
-    // Set up styles
-    assign(this.container.style, CONTAINER_STYLES);
-    this.container.style.position = this.options.containerPosition;
-    assign(this.img.style, IMG_STYLES, ABSOLUTE_STYLES);
-
-    // Create debouncedShift function
-    this.debounceApplyShift = debounce(
-      this.applyShift,
-      this.options.debounceTime
-    );
-
-    // Initialize focus
-    this.focus = this.options.focus
-      ? this.options.focus
-      : {
-          x: parseFloat(this.img.getAttribute('data-focus-x')) || 0,
-          y: parseFloat(this.img.getAttribute('data-focus-y')) || 0,
-        };
-
-    // Start listening for resize events
-    this.startListening();
-
-    // Set focus
-    this.setFocus(this.focus);
-  }
-
-  public setFocus = (focus: Focus) => {
-    this.focus = focus;
-    this.img.setAttribute('data-focus-x', focus.x.toString());
-    this.img.setAttribute('data-focus-y', focus.y.toString());
-    this.applyShift();
-  };
-
-  public applyShift = () => {
-    const { naturalWidth: imageW, naturalHeight: imageH } = this.img;
-    const {
-      width: containerW,
-      height: containerH,
-    } = this.container.getBoundingClientRect();
-
-    // Amount position will be shifted
-    let hShift = '0';
-    let vShift = '0';
-
-    if (!(containerW > 0 && containerH > 0 && imageW > 0 && imageH > 0)) {
-      return false; // Need dimensions to proceed
-    }
-
-    // Which is over by more?
-    const wR = imageW / containerW;
-    const hR = imageH / containerH;
-
-    // Reset max-width and -height
-    this.img.style.maxHeight = null;
-    this.img.style.maxWidth = null;
-
-    // Minimize image while still filling space
-    if (imageW > containerW && imageH > containerH) {
-      this.img.style[wR > hR ? 'maxHeight' : 'maxWidth'] = '100%';
-    }
-
-    if (wR > hR) {
-      hShift = `${this.calcShift(hR, containerW, imageW, this.focus.x)}%`;
-    } else if (wR < hR) {
-      vShift = `${this.calcShift(wR, containerH, imageH, this.focus.y, true)}%`;
-    }
-
-    this.img.style.top = vShift;
-    this.img.style.left = hShift;
-  };
-
-  public startListening() {
-    if (this.listening) {
-      return;
-    }
-    this.listening = true;
-    if (this.options.updateOnWindowResize) {
-      window.addEventListener('resize', this.debounceApplyShift);
-    }
-    if (this.options.updateOnContainerResize) {
-      const object = document.createElement('object');
-      assign(object.style, RESIZE_LISTENER_OBJECT_STYLES, ABSOLUTE_STYLES);
-      // Use load event callback because contentDocument doesn't exist
-      // until this fires in Firefox
-      object.addEventListener('load', (e: Event) =>
-        object.contentDocument.defaultView.addEventListener('resize', () =>
-          this.debounceApplyShift()
-        )
-      );
-      object.type = 'text/html';
-      object.setAttribute('aria-hidden', 'true');
-      object.tabIndex = -1;
-      this.container.appendChild(object);
-      object.data = 'about:blank';
-      this.resizeListenerObject = object;
-    }
-  }
-
-  public stopListening() {
-    if (!this.listening) {
-      return;
-    }
-    this.listening = false;
-    window.removeEventListener('resize', this.debounceApplyShift);
-    if (
-      this.resizeListenerObject &&
-      this.resizeListenerObject.contentDocument
-    ) {
-      this.resizeListenerObject.contentDocument.defaultView.removeEventListener(
-        'resize',
-        this.debounceApplyShift
-      );
-      this.container.removeChild(this.resizeListenerObject);
-      this.resizeListenerObject = null;
-    }
-  }
+export function start() {
+  const observing: WeakSet<HTMLImageElement> = new WeakSet();
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
 
   // Calculate the new left/top percentage shift of an image
-  private calcShift(
-    conToImageRatio: number,
+  function calcShift(
     containerSize: number,
     imageSize: number,
     focusSize: number,
     toMinus?: boolean
   ) {
-    const containerCenter = Math.floor(containerSize / 2); // Container center in px
-    const focusFactor = (focusSize + 1) / 2; // Focus point of resize image in px
-    const scaledImage = Math.floor(imageSize / conToImageRatio); // Can't use width() as images may be display:none
-    let focus = Math.floor(focusFactor * scaledImage);
-    if (toMinus) focus = scaledImage - focus;
-    let focusOffset = focus - containerCenter; // Calculate difference between focus point and center
-    const remainder = scaledImage - focus; // Reduce offset if necessary so image remains filled
-    const containerRemainder = containerSize - containerCenter;
-    if (remainder < containerRemainder)
-      focusOffset -= containerRemainder - remainder;
-    if (focusOffset < 0) focusOffset = 0;
-
-    return (focusOffset * -100) / containerSize;
+    const res =
+      50 * focusSize +
+      (1 / ((imageSize - containerSize) / containerSize)) * 50 * focusSize;
+    return Math.min(Math.max(50 + (toMinus ? -1 : 1) * res, 0), 100);
   }
+
+  function applyShift(
+    img: HTMLImageElement,
+    elementW: number,
+    elementH: number
+  ) {
+    if ((img as any).__FOCUS_PICKER__) {
+      return;
+    }
+
+    // Fetch the natural size of the image (not the rendered size).
+    let { naturalWidth: imageW, naturalHeight: imageH } = img;
+
+    // Test if the image is still loading.
+    const isLoading = img.src === TRANSPARENT_PIXEL || !imageW || !imageH;
+
+    if (!isLoading && img.hasAttribute('data-src')) {
+      img.src = img.getAttribute('data-src');
+      img.removeAttribute('data-src');
+    }
+
+    // If we're offered width and height values as data attributes from the user, grab them.
+    if (!imageW && img.hasAttribute('data-width')) {
+      imageW = parseFloat(img.getAttribute('data-width'));
+    }
+    if (!imageH && img.hasAttribute('data-height')) {
+      imageH = parseFloat(img.getAttribute('data-height'));
+    }
+
+    // Get our focus values.
+    const focus: Focus = {
+      x: parseFloat(img.getAttribute('data-focus-x')) || 0,
+      y: parseFloat(img.getAttribute('data-focus-y')) || 0,
+    };
+
+    // Amount position will be shifted
+    let hShift = 50;
+    let vShift = 50;
+
+    // Need dimensions to proceed
+    if (!(elementW > 0 && elementH > 0 && imageW > 0 && imageH > 0)) {
+      return false;
+    }
+
+    // Which is over by more?
+    const wR = imageW / elementW;
+    const hR = imageH / elementH;
+
+    if (wR > hR) {
+      hShift = calcShift(elementW, imageW / hR, focus.x);
+    } else if (wR < hR) {
+      vShift = calcShift(elementH, imageH / wR, focus.y, true);
+    }
+
+    img.style.objectFit = 'cover';
+    img.style.objectPosition = `${hShift}% ${vShift}%`;
+
+    if (img.hasAttribute('data-blurhash')) {
+      if (isLoading && img.src !== TRANSPARENT_PIXEL) {
+        img.setAttribute('data-src', img.src);
+        img.src = TRANSPARENT_PIXEL;
+      }
+      const blurhash = img.getAttribute('data-blurhash');
+      const pixels = decodeBlurHash(blurhash, imageW, imageH);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      canvas.width = imageW;
+      canvas.height = imageH;
+      const imageData = ctx.createImageData(imageW, imageH);
+      imageData.data.set(pixels);
+      ctx.putImageData(imageData, 0, 0);
+      img.style.background = `url("${canvas.toDataURL(
+        'image/jpeg'
+      )}") ${hShift}%/${vShift}% no-repeat`;
+      img.style.backgroundSize = 'cover';
+    }
+  }
+
+  function applyToEvent(evt: Event) {
+    const img = evt.target as HTMLImageElement;
+    const { width, height } = img.getBoundingClientRect();
+    applyShift(img, width, height);
+  }
+
+  const observer = new ResizeObserver(entries => {
+    for (const entry of entries) {
+      const img = entry.target as HTMLImageElement;
+      const { inlineSize: width, blockSize: height } = entry.borderBoxSize[0];
+      applyShift(img, width, height);
+    }
+  });
+
+  const mutations = new MutationObserver(entries => {
+    for (const entry of entries) {
+      switch (entry.type) {
+        case 'childList': {
+          for (const el of Array.from(
+            entry.removedNodes
+          ) as HTMLImageElement[]) {
+            if (!el || !el.matches || !el.matches(QUERY_SELECTOR)) {
+              continue;
+            }
+            if (observing.has(el)) {
+              observing.delete(el);
+              observer.unobserve(el);
+              el.removeEventListener('load', applyToEvent);
+            }
+          }
+          for (const el of Array.from(entry.addedNodes) as HTMLImageElement[]) {
+            if (!el || !el.matches || !el.matches(QUERY_SELECTOR)) {
+              continue;
+            }
+            if (!observing.has(el)) {
+              observing.add(el);
+              observer.observe(el);
+              el.addEventListener('load', applyToEvent);
+            }
+          }
+          break;
+        }
+        case 'attributes': {
+          const img = entry.target as HTMLImageElement;
+          const { width, height } = img.getBoundingClientRect();
+          applyShift(img, width, height);
+          break;
+        }
+      }
+    }
+  });
+
+  for (const img of Array.from(
+    document.querySelectorAll(QUERY_SELECTOR)
+  ) as HTMLImageElement[]) {
+    const { width, height } = img.getBoundingClientRect();
+    if (!observing.has(img)) {
+      observing.add(img);
+      observer.observe(img);
+      img.addEventListener('load', applyToEvent);
+    }
+    applyShift(img, width, height);
+  }
+
+  mutations.observe(document.body, {
+    subtree: true,
+    childList: true,
+    attributeFilter: [
+      'data-focus-x',
+      'data-focus-y',
+      'data-blurhash',
+      'data-width',
+      'data-height',
+    ],
+  });
 }

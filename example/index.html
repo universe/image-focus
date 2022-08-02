@@ -9,15 +9,15 @@
     <style>
       body {
         font-family: monospace;
+        height: 100vh;
+        margin: 0;
       }
 
       .grid {
         display: grid;
-        display: -ms-grid;
+        display: grid;
         grid-template-columns: 6fr 3fr 2fr;
-        -ms-grid-columns: 6fr 3fr 2fr;
         grid-template-rows: 6fr 3fr 2fr;
-        -ms-grid-rows: 6fr 3fr 2fr;
         grid-gap: 5px;
 
         position: absolute;
@@ -31,53 +31,60 @@
       }
 
       .top-left {
-        -ms-grid-column: 1;
-        -ms-grid-row: 1;
+        grid-column: 1;
+        grid-row: 1;
       }
 
       .top-center {
-        -ms-grid-column: 2;
-        -ms-grid-row: 1;
+        grid-column: 2;
+        grid-row: 1;
       }
 
       .top-right {
-        -ms-grid-column: 3;
-        -ms-grid-row: 1;
+        grid-column: 3;
+        grid-row: 1;
       }
 
       .center-left {
-        -ms-grid-column: 1;
-        -ms-grid-row: 2;
+        grid-column: 1;
+        grid-row: 2;
       }
 
       .center-center {
-        -ms-grid-column: 2;
-        -ms-grid-row: 2;
+        grid-column: 2;
+        grid-row: 2;
       }
 
       .center-right {
-        -ms-grid-column: 3;
-        -ms-grid-row: 2;
+        grid-column: 3;
+        grid-row: 2;
       }
 
       .bottom-left {
-        -ms-grid-column: 1;
-        -ms-grid-row: 3;
+        grid-column: 1;
+        grid-row: 3;
       }
 
       .bottom-center {
-        -ms-grid-column: 2;
-        -ms-grid-row: 3;
+        grid-column: 2;
+        grid-row: 3;
       }
 
       .bottom-right {
-        -ms-grid-column: 3;
-        -ms-grid-row: 3;
+        grid-column: 3;
+        grid-row: 3;
       }
 
       .focused-image {
         /* Just animating transitions */
         transition: top 0.25s ease-in-out, left 0.25s ease-in-out;
+        object-fit: cover;
+        width: 100%;
+        height: 100%;
+        min-width: 100%;
+        max-width: 100%;
+        min-height: 100%;
+        max-height: 100%;
       }
 
       .image-focus-picker-container {
@@ -122,87 +129,69 @@
 
   <body>
     <div class="grid">
-      <div class="focused-image-container top-left">
-        <img
-          class="focused-image"
-          src="https://picsum.photos/2400/1400?image=1001"
-          alt=""
-          data-focus-x="0"
-          data-focus-y="0"
-        />
-      </div>
-      <div class="focused-image-container top-center">
-        <img
-          class="focused-image"
-          src="https://picsum.photos/2400/1400?image=1001"
-          alt=""
-          data-focus-x="0"
-          data-focus-y="0"
-        />
-      </div>
-      <div class="focused-image-container top-right">
-        <img
-          class="focused-image"
-          src="https://picsum.photos/2400/1400?image=1001"
-          alt=""
-          data-focus-x="0"
-          data-focus-y="0"
-        />
-      </div>
-      <div class="focused-image-container center-left">
-        <img
-          class="focused-image"
-          src="https://picsum.photos/2400/1400?image=1001"
-          alt=""
-          data-focus-x="0"
-          data-focus-y="0"
-        />
-      </div>
-      <div class="focused-image-container center-center">
-        <img
-          class="focused-image"
-          src="https://picsum.photos/2400/1400?image=1001"
-          alt=""
-          data-focus-x="0"
-          data-focus-y="0"
-        />
-      </div>
-      <div class="focused-image-container center-right">
-        <img
-          class="focused-image"
-          src="https://picsum.photos/2400/1400?image=1001"
-          alt=""
-          data-focus-x="0"
-          data-focus-y="0"
-        />
-      </div>
-      <div class="focused-image-container bottom-left">
-        <img
-          class="focused-image"
-          src="https://picsum.photos/2400/1400?image=1001"
-          alt=""
-          data-focus-x="0"
-          data-focus-y="0"
-        />
-      </div>
-      <div class="focused-image-container bottom-center">
-        <img
-          class="focused-image"
-          src="https://picsum.photos/2400/1400?image=1001"
-          alt=""
-          data-focus-x="0"
-          data-focus-y="0"
-        />
-      </div>
-      <div class="focused-image-container bottom-right">
-        <img
-          class="focused-image"
-          src="https://picsum.photos/2400/1400?image=1001"
-          alt=""
-          data-focus-x="0"
-          data-focus-y="0"
-        />
-      </div>
+      <img
+        class="focused-image top-left"
+        src="https://picsum.photos/2400/1400?image=1001"
+        alt=""
+        data-focus-x="0.5"
+        data-focus-y="0"
+      />
+      <img
+        class="focused-image top-center"
+        src="https://picsum.photos/2400/1400?image=1001"
+        alt=""
+        data-focus-x="0.5"
+        data-focus-y="0"
+      />
+      <img
+        class="focused-image top-right"
+        src="https://picsum.photos/2400/1400?image=1001"
+        alt=""
+        data-focus-x="0.5"
+        data-focus-y="0"
+      />
+      <img
+        class="focused-image center-left"
+        src="https://picsum.photos/2400/1400?image=1001"
+        alt=""
+        data-focus-x="0.5"
+        data-focus-y="0"
+      />
+      <img
+        class="focused-image center-center"
+        src="https://picsum.photos/2400/1400?image=1001"
+        alt=""
+        data-focus-x="0.5"
+        data-focus-y="0"
+      />
+      <img
+        class="focused-image center-right"
+        src="https://picsum.photos/2400/1400?image=1001"
+        alt=""
+        data-focus-x="0.5"
+        data-focus-y="0"
+      />
+      <img
+        class="focused-image bottom-left"
+        src="https://picsum.photos/2400/1400?image=1001"
+        alt=""
+        data-focus-x="0.5"
+        data-focus-y="0"
+      />
+      <img
+        class="focused-image bottom-center"
+        src="https://picsum.photos/2400/1400?image=1001"
+        alt=""
+        data-focus-x="0.5"
+        data-focus-y="0"
+      />
+      <img
+        class="focused-image bottom-right"
+        src="https://picsum.photos/2400/1400?image=1001"
+        alt=""
+        data-focus-x="0.5"
+        data-focus-y="0"
+      />
     </div>
 
     <div class="image-focus-picker-container">
@@ -223,12 +212,12 @@
           </svg>
         </a>
       </h3>
-      <div>
+      <div class="focus-picker">
         <img
           id="focus-picker-img"
           src="https://picsum.photos/2400/1400?image=1001"
           alt=""
-          data-focus-x="0"
+          data-focus-x="0.5"
           data-focus-y="0"
         />
       </div>

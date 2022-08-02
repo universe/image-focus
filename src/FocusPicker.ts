@@ -1,195 +1,172 @@
-import { noop } from './helpers/noop';
-import { assign } from './helpers/assign';
-import { CONTAINER_STYLES } from './sharedStyles';
-import { Focus, FocusPickerOptions } from './interfaces';
-
+import { Focus } from './FocusedImage';
 import retina from './retina.svg';
 
-const IMAGE_STYLES = {
-  // Get rid of bottom padding from default display
-  display: 'block',
-  // Make image fill container
-  maxWidth: '100%',
-  // Prevent Android refresh on pull down
-  touchAction: 'none',
-};
+/**
+ * @param {Focus} focusCoordinates
+ * @returns {void}
+ */
+export type OnFocusChange = (focusCoordinates: Focus) => void;
 
-const RETINA_STYLES = {
-  position: 'absolute',
-  cursor: 'move',
-
-  // Center the retina
-  transform: 'translate(-50%, -50%)',
-};
-
-const DEFAULT_OPTIONS: FocusPickerOptions = {
-  onChange: noop,
-  retina,
-};
+export interface FocusPickerOptions {
+  onChange?: OnFocusChange; // Callback that receives FocusCoordinates on change
+  focus?: Focus; // Focus to initialize with
+  retina?: string; // The src attribute for the retina
+}
 
 export class FocusPicker {
-  container: HTMLElement;
-  img: HTMLImageElement;
-  retina: HTMLImageElement;
-  focus: Focus;
-  private isDragging: boolean;
-  private options: FocusPickerOptions;
-  private _enabled: boolean = false;
+  private container: HTMLElement;
+  private img: HTMLImageElement;
+  private retina: HTMLImageElement;
+  private onChange?: OnFocusChange | null;
 
-  constructor(imageNode: HTMLImageElement, options: FocusPickerOptions = {}) {
-    // Merge options in
-    this.options = assign({}, DEFAULT_OPTIONS, options);
+  constructor(
+    imageNode: HTMLImageElement,
+    options: Partial<FocusPickerOptions> = {}
+  ) {
+    if ((imageNode as any).__FOCUS_PICKER__) {
+      return (imageNode as any).__FOCUS_PICKER__ as FocusPicker;
+    }
+    (imageNode as any).__FOCUS_PICKER__ = this;
 
     // Set up references
     this.img = imageNode;
-    this.container = imageNode.parentElement;
-
-    // Styles and DOM config
     this.img.draggable = false;
-    // Assign styles
-    assign(this.img.style, IMAGE_STYLES);
-    assign(this.container.style, CONTAINER_STYLES);
+    this.container = imageNode.parentElement;
+    this.onChange = options.onChange || null;
 
-    // Initialize Focus coordinates
-    this.focus = this.getFocus();
+    // Create retina element
+    this.retina = document.createElement('img');
+    this.retina.src = options.retina || retina;
+    this.retina.draggable = false;
+    Object.assign(this.retina.style, {
+      position: 'absolute',
+      transform: 'translate(calc(-50% - 0.5px), calc(-50% + 0.5px))',
+      pointerEvents: 'none',
+    });
+
+    // Assign styles
+    Object.assign(this.img.style, {
+      touchAction: 'none',
+      cursor: 'crosshair',
+      objectFit: 'contain',
+    }); // Prevent Android refresh on pull down
+    Object.assign(this.container.style, {
+      position: 'relative',
+      display: 'flex',
+    });
 
     // Create and attach the retina focal point, start listeners and attach focus
-    this.enable();
+    this.enable(options.focus || this.getFocus());
   }
 
-  private getFocus(): Focus {
-    return this.options.focus
-      ? this.options.focus
-      : {
-          x: parseFloat(this.img.getAttribute('data-focus-x')) || 0,
-          y: parseFloat(this.img.getAttribute('data-focus-y')) || 0,
-        };
+  public isEnabled(): boolean {
+    return this.container.contains(this.retina);
   }
 
-  /**
-   * Creates the focal point retina and
-   */
-  public enable() {
-    if (!this._enabled) {
-      // Create and attach the retina focal point
-      this.retina = document.createElement('img');
-      this.retina.src = this.options.retina;
-      this.retina.draggable = false;
-      this.container.appendChild(this.retina);
-      assign(this.retina.style, RETINA_STYLES);
-      this.startListening();
-      this.setFocus(this.focus);
-      this._enabled = true;
+  public enable(focus?: Focus) {
+    if (this.isEnabled()) {
+      return;
     }
+    // Attach the retina focal point
+    this.container.appendChild(this.retina);
+
+    // Bind container events
+    this.img.addEventListener('mousedown', this.startDragging);
+    this.img.addEventListener('touchstart', this.startDragging, {
+      passive: true,
+    });
+    this.img.addEventListener('load', this.updateRetinaPosition);
+
+    this.setFocus(focus);
   }
 
   public disable() {
-    if (this._enabled && this.retina) {
-      this.stopListening();
-      this.container.removeChild(this.retina);
-      this._enabled = false;
+    if (!this.isEnabled()) {
+      return;
     }
+    this.container.removeChild(this.retina);
+    this.img.removeEventListener('mousedown', this.startDragging);
+    this.img.removeEventListener('touchstart', this.startDragging);
+    this.img.removeEventListener('load', this.updateRetinaPosition);
+    this.stopDragging();
   }
 
-  get enabled(): boolean {
-    return this._enabled;
-  }
-
-  public startListening() {
-    // Bind container events
-    this.container.addEventListener('mousedown', this.startDragging);
-    this.container.addEventListener('mousemove', this.handleMove);
-    this.container.addEventListener('mouseup', this.stopDragging);
-    this.container.addEventListener('mouseleave', this.stopDragging);
-    this.container.addEventListener('touchend', this.stopDragging);
-
-    // temporarily cast config objs until this issue is resolved
-    // https://github.com/Microsoft/TypeScript/issues/9548
-    this.container.addEventListener('touchstart', this.startDragging, {
-      passive: true,
-    } as any);
-    this.container.addEventListener('touchmove', this.handleMove, {
-      passive: true,
-    } as any);
-
-    this.img.addEventListener('load', this.updateRetinaPositionFromFocus);
-  }
-
-  public stopListening() {
-    this.container.removeEventListener('mousedown', this.startDragging);
-    this.container.removeEventListener('mousemove', this.handleMove);
-    this.container.removeEventListener('mouseup', this.stopDragging);
-    this.container.removeEventListener('mouseleave', this.stopDragging);
-    this.container.removeEventListener('touchend', this.stopDragging);
-    this.container.removeEventListener('touchstart', this.startDragging);
-    this.container.removeEventListener('touchmove', this.handleMove);
-    this.img.removeEventListener('load', this.updateRetinaPositionFromFocus);
+  public getFocus(): Focus {
+    return {
+      x: parseFloat(this.img.getAttribute('data-focus-x')) || 0,
+      y: parseFloat(this.img.getAttribute('data-focus-y')) || 0,
+    };
   }
 
   public setFocus(focus: Focus) {
-    this.focus = focus;
     this.img.setAttribute('data-focus-x', focus.x.toString());
     this.img.setAttribute('data-focus-y', focus.y.toString());
-    this.updateRetinaPositionFromFocus();
-    this.options.onChange(focus);
+    this.updateRetinaPosition();
+    this.onChange?.(focus);
   }
 
+  private retinaAnimationFrame: null | number = null;
+  private updateRetinaPosition = () => {
+    if (!this.retinaAnimationFrame) {
+      this.retinaAnimationFrame = window.requestAnimationFrame(() => {
+        this.retinaAnimationFrame = null;
+        const { width, height } = this.img.getBoundingClientRect();
+        const { naturalWidth, naturalHeight } = this.img;
+        const realWidth = height * (naturalWidth / naturalHeight);
+        const realHeight = width * (naturalHeight / naturalWidth);
+        const isWide = naturalWidth / width > naturalHeight / height;
+        const focus = this.getFocus();
+        const offsetX = isWide
+          ? width * (focus.x / 2 + 0.5)
+          : width * (focus.x / 2 + 0.5) * (realWidth / width) +
+            (width - realWidth) / 2;
+        const offsetY = !isWide
+          ? height * (focus.y / -2 + 0.5)
+          : height * (focus.y / -2 + 0.5) * (realHeight / height) +
+            (height - realHeight) / 2;
+        this.retina.style.top = `${offsetY}px`;
+        this.retina.style.left = `${offsetX}px`;
+      });
+    }
+  };
+
   private startDragging = (e: MouseEvent | TouchEvent) => {
-    e.preventDefault();
-    this.isDragging = true;
-    e instanceof MouseEvent
-      ? this.updateCoordinates(e.clientX, e.clientY)
-      : this.updateCoordinates(e.touches[0].clientX, e.touches[0].clientY);
+    document.body.addEventListener('mousemove', this.handleMove);
+    document.body.addEventListener('touchmove', this.handleMove, {
+      passive: true,
+    } as any);
+    document.body.addEventListener('mouseup', this.stopDragging);
+    document.body.addEventListener('touchend', this.stopDragging);
+    this.handleMove(e);
   };
 
   private handleMove = (e: MouseEvent | TouchEvent) => {
     e.preventDefault();
-    if (e instanceof MouseEvent) {
-      this.updateCoordinates(e.clientX, e.clientY);
-    } else {
-      const touch = e.touches[0];
-      const touchedEl = document.elementFromPoint(touch.pageX, touch.pageY);
-      touchedEl !== this.retina && touchedEl !== this.img
-        ? this.stopDragging()
-        : this.updateCoordinates(touch.clientX, touch.clientY);
-    }
+
+    // Calculate FocusPoint coordinates
+    const { width, height, left, top } = this.img.getBoundingClientRect();
+    const { naturalWidth, naturalHeight } = this.img;
+    const realWidth = height * (naturalWidth / naturalHeight);
+    const realHeight = width * (naturalHeight / naturalWidth);
+    const offsetX =
+      (e instanceof MouseEvent ? e.clientX : e.touches[0].clientX) - left;
+    const offsetY =
+      (e instanceof MouseEvent ? e.clientY : e.touches[0].clientY) - top;
+    const isWide = naturalWidth / width > naturalHeight / height;
+    const x = (offsetX / width - 0.5) * 2 * (!isWide ? realHeight / height : 1);
+    const y = (offsetY / height - 0.5) * -2 * (isWide ? realWidth / width : 1);
+
+    // Set our new focus value.
+    this.setFocus({
+      x: Math.min(Math.max(x, -1), 1),
+      y: Math.min(Math.max(y, -1), 1),
+    });
   };
 
   private stopDragging = () => {
-    this.isDragging = false;
+    document.body.removeEventListener('mousemove', this.handleMove);
+    document.body.removeEventListener('touchmove', this.handleMove);
+    document.body.removeEventListener('mouseup', this.stopDragging);
+    document.body.removeEventListener('touchend', this.stopDragging);
   };
-
-  private calculateOffsetFromFocus() {
-    const { width, height } = this.img.getBoundingClientRect();
-    const offsetX = width * (this.focus.x / 2 + 0.5);
-    const offsetY = height * (this.focus.y / -2 + 0.5);
-    return { offsetX, offsetY };
-  }
-
-  private updateRetinaPositionFromFocus = () => {
-    this.updateRetinaPosition(this.calculateOffsetFromFocus());
-  };
-
-  private updateRetinaPosition = (offsets: {
-    offsetX: number;
-    offsetY: number;
-  }) => {
-    this.retina.style.top = `${offsets.offsetY}px`;
-    this.retina.style.left = `${offsets.offsetX}px`;
-  };
-
-  private updateCoordinates(clientX: number, clientY: number) {
-    if (!this.isDragging) return; // bail if not dragging
-    const { width, height, left, top } = this.img.getBoundingClientRect();
-
-    // Calculate FocusPoint coordinates
-    const offsetX = clientX - left;
-    const offsetY = clientY - top;
-    const x = (offsetX / width - 0.5) * 2;
-    const y = (offsetY / height - 0.5) * -2;
-
-    // TODO: Figure out an elegant way to use the setFocus API without
-    // having to recalculate the offset from focus
-    this.setFocus({ x, y });
-  }
 }

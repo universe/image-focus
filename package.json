@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0",
+  "version": "2.1.0",
   "description": "A dependency free utility for cropping images based on a focal point ~2.13kB gzipped",
   "keywords": [
     "responsive",
@@ -29,7 +29,7 @@
     "start": "tsdx watch",
     "build": "tsdx build --format cjs,esm,umd",
     "test": "tsdx test --passWithNoTests",
-    "lint": "tsdx lint",
+    "lint": "tsdx lint --fix",
     "prepare": "tsdx build --format cjs,esm,umd"
   },
   "peerDependencies": {},
@@ -44,10 +44,11 @@
     "singleQuote": true,
     "trailingComma": "es5"
   },
-  "name": "image-focus",
-  "module": "dist/image-focus-tsdx.esm.js",
+  "name": "@universe/image-focus",
+  "module": "dist/image-focus.esm.js",
   "devDependencies": {
     "@rollup/plugin-image": "^2.0.5",
+    "@types/resize-observer-browser": "^0.1.7",
     "husky": "^4.2.5",
     "tsdx": "^0.13.2",
     "tslib": "^2.1.0",

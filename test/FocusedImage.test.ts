@@ -1,4 +1,4 @@
-import { FocusedImage } from '../src/FocusedImage';
+import { start } from '../src/FocusedImage';
 
 jest.useFakeTimers();
 
@@ -31,39 +31,13 @@ describe('FocusedImage', () => {
     `;
   });
 
-  it('FocusedImage is instantiable', () => {
+  it('should be able to update focus through attrs', () => {
     const img = document.querySelector('.focused-image') as HTMLImageElement;
-    const instance = new FocusedImage(img);
-    expect(instance).toBeInstanceOf(FocusedImage);
-  });
-
-  it('should be able to update focus with setFocus', () => {
-    const img = document.querySelector('.focused-image') as HTMLImageElement;
-    const instance = new FocusedImage(img);
-    const spy = jest.spyOn(instance, 'applyShift');
-    instance.setFocus({ x: 0.25, y: 0.3 });
+    start();
+    img.setAttribute('data-focus-x', '0.25');
+    img.setAttribute('data-focus-y', '0.3');
     expect(img.getAttribute('data-focus-x')).toBe('0.25');
     expect(img.getAttribute('data-focus-y')).toBe('0.3');
-    expect(spy).toHaveBeenCalled();
-  });
-
-  it('should calculate the shift % correctly', () => {
-    const img = document.querySelector('.focused-image') as HTMLImageElement;
-    const instance = new FocusedImage(img);
-    // TODO: figure out a better way to test this private method
-    const result = (instance as any).calcShift(
-      7.064574627454072,
-      238.90625,
-      2400,
-      0.7133333333333334
-    );
-    expect(result).toBe(-41.89666448659254);
-  });
-
-  it('should have element references', () => {
-    const img = document.querySelector('.focused-image') as HTMLImageElement;
-    const instance = new FocusedImage(img);
-    expect(instance.img).toBeTruthy();
-    expect(instance.container).toBeTruthy();
+    expect(img.getAttribute('style')).toBe('0.3');
   });
 });

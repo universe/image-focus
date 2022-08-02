@@ -1,4 +1,6 @@
-import { FocusedImage, FocusPicker, Focus } from "../."
+import { start, FocusPicker, Focus } from "../."
+
+start();
 
 // Get our references to elements
 const focusPickerEl = document.getElementById("focus-picker-img") as HTMLImageElement
@@ -8,36 +10,26 @@ const dataAttributes = document.getElementById("data-attributes") as HTMLInputEl
 const focusedImageElements = document.querySelectorAll(".focused-image") as NodeListOf<HTMLImageElement>
 
 // Set our starting focus
-const focus: Focus = { x: 0, y: 0 }
-
-// Iterate over images and instantiate FocusedImage from each
-// pushing into an array for updates later
-const focusedImages: FocusedImage[] = []
-Array.prototype.forEach.call(focusedImageElements, (imageEl: HTMLImageElement) => {
-  focusedImages.push(
-    new FocusedImage(imageEl, {
-      focus,
-      debounceTime: 17,
-      updateOnWindowResize: true,
-    }),
-  )
-})
+const focus: Focus = { x: 0.5, y: 0 };
 
 // Instantiate our FocusPicker providing starting focus
 // and onChange callback
 const focusPicker = new FocusPicker(focusPickerEl, {
   focus,
   onChange: (newFocus: Focus) => {
-    const x = newFocus.x.toFixed(2)
-    const y = newFocus.y.toFixed(2)
-    coordinates.value = `{x: ${x}, y: ${y}}`
-    dataAttributes.value = `data-focus-x="${x}" data-focus-y="${y}"`
-    focusedImages.forEach(focusedImage => focusedImage.setFocus(newFocus))
+    const x = newFocus.x.toFixed(2);
+    const y = newFocus.y.toFixed(2);
+    coordinates.value = `{x: ${x}, y: ${y}}`;
+    dataAttributes.value = `data-focus-x="${x}" data-focus-y="${y}"`;
+    for (const img of Array.from(focusedImageElements)) {
+      img.setAttribute('data-focus-x', x.toString());
+      img.setAttribute('data-focus-y', y.toString());
+    }
   },
-})
+});
 
 // Add event listener for updating image sources
 imgSrcEl.addEventListener("input", () => {
   focusPicker.img.src = imgSrcEl.value
-  focusedImages.forEach(focusedImage => (focusedImage.img.src = imgSrcEl.value))
-})
+  focusedImageElements.forEach(img => (img.src = imgSrcEl.value))
+});

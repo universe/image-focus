@@ -3,6 +3,7 @@
     "src",
     "types"
   ],
+  "types": ["resize-observer-browser"],
   "compilerOptions": {
     "target": "ES5",
     "module": "esnext",

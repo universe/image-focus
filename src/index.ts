@@ -1,8 +1,2 @@
-export { FocusPicker } from './FocusPicker';
-export { FocusedImage } from './FocusedImage';
-export {
-  Focus,
-  FocusedImageOptions,
-  FocusPickerOptions,
-  OnFocusChange,
-} from './interfaces';
+export { FocusPicker, FocusPickerOptions, OnFocusChange } from './FocusPicker';
+export { start, Focus } from './FocusedImage';
