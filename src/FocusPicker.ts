@@ -1,3 +1,4 @@
+import { encode } from 'blurhash';
 import { Focus } from './FocusedImage';
 import retina from './retina.svg';
 
@@ -13,9 +14,33 @@ export interface FocusPickerOptions {
   retina?: string; // The src attribute for the retina
 }
 
+const encodeImageToBlurhash = async (image: HTMLImageElement) => {
+  const size = 200;
+  const canvas = document.createElement('canvas');
+  const width = image.naturalWidth;
+  const height = image.naturalHeight;
+
+  if (!width || !height) {
+    return '';
+  }
+
+  const smallW = width > height ? size : Math.round(size * (width / height));
+  const smallH = height > width ? size : Math.round(size * (height / width));
+
+  canvas.width = smallW;
+  canvas.height = smallH;
+
+  const context = canvas.getContext('2d');
+  context.drawImage(image, 0, 0, smallW, smallH);
+  const imageData = context.getImageData(0, 0, smallW, smallH);
+  return encode(imageData.data, imageData.width, imageData.height, 4, 3);
+};
+
 export class FocusPicker {
   private container: HTMLElement;
   private img: HTMLImageElement;
+  private blurhash: string;
+  private prevSrc: string;
   private retina: HTMLImageElement;
   private onChange?: OnFocusChange | null;
 
@@ -31,6 +56,7 @@ export class FocusPicker {
     // Set up references
     this.img = imageNode;
     this.img.draggable = false;
+    this.img.crossOrigin = 'Anonymous';
     this.container = imageNode.parentElement;
     this.onChange = options.onChange || null;
 
@@ -67,6 +93,7 @@ export class FocusPicker {
     if (this.isEnabled()) {
       return;
     }
+
     // Attach the retina focal point
     this.container.appendChild(this.retina);
 
@@ -75,9 +102,18 @@ export class FocusPicker {
     this.img.addEventListener('touchstart', this.startDragging, {
       passive: true,
     });
-    this.img.addEventListener('load', this.updateRetinaPosition);
+    this.img.addEventListener('load', this.ensure.bind(this));
 
     this.setFocus(focus);
+  }
+
+  public async ensure() {
+    this.updateRetinaPosition();
+    if (this.img && this.prevSrc !== this.img.src) {
+      this.blurhash = await encodeImageToBlurhash(this.img);
+      this.prevSrc = this.img.src;
+    }
+    this.onChange?.(this.getFocus());
   }
 
   public disable() {
@@ -87,7 +123,7 @@ export class FocusPicker {
     this.container.removeChild(this.retina);
     this.img.removeEventListener('mousedown', this.startDragging);
     this.img.removeEventListener('touchstart', this.startDragging);
-    this.img.removeEventListener('load', this.updateRetinaPosition);
+    this.img.removeEventListener('load', this.ensure);
     this.stopDragging();
   }
 
@@ -95,14 +131,17 @@ export class FocusPicker {
     return {
       x: parseFloat(this.img.getAttribute('data-focus-x')) || 0,
       y: parseFloat(this.img.getAttribute('data-focus-y')) || 0,
+      width: this.img.naturalWidth,
+      height: this.img.naturalHeight,
+      blurhash: this.blurhash,
     };
   }
 
-  public setFocus(focus: Focus) {
+  public setFocus(focus: Partial<Focus>) {
     this.img.setAttribute('data-focus-x', focus.x.toString());
     this.img.setAttribute('data-focus-y', focus.y.toString());
     this.updateRetinaPosition();
-    this.onChange?.(focus);
+    this.onChange?.(this.getFocus());
   }
 
   private retinaAnimationFrame: null | number = null;

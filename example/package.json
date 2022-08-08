@@ -7,10 +7,8 @@
     "start": "parcel index.html",
     "build": "parcel build index.html"
   },
-  "dependencies": {
-  },
-  "alias": {
-  },
+  "dependencies": {},
+  "alias": {},
   "devDependencies": {
     "parcel": "^1.12.3",
     "typescript": "^3.4.5"

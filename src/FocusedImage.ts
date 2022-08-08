@@ -2,12 +2,14 @@
 import decodeBlurHash from './decodeBlurHash.js';
 
 const QUERY_SELECTOR = 'img[data-focus-x][data-focus-y]';
-const TRANSPARENT_PIXEL =
-  'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+// const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
 export interface Focus {
   x: number;
   y: number;
+  blurhash: string;
+  width: number;
+  height: number;
 }
 
 export function start() {
@@ -41,26 +43,25 @@ export function start() {
     let { naturalWidth: imageW, naturalHeight: imageH } = img;
 
     // Test if the image is still loading.
-    const isLoading = img.src === TRANSPARENT_PIXEL || !imageW || !imageH;
+    const isLoading = !imageW || !imageH;
 
-    if (!isLoading && img.hasAttribute('data-src')) {
-      img.src = img.getAttribute('data-src');
-      img.removeAttribute('data-src');
-    }
-
-    // If we're offered width and height values as data attributes from the user, grab them.
-    if (!imageW && img.hasAttribute('data-width')) {
-      imageW = parseFloat(img.getAttribute('data-width'));
-    }
-    if (!imageH && img.hasAttribute('data-height')) {
-      imageH = parseFloat(img.getAttribute('data-height'));
-    }
+    // if (!isLoading && img.hasAttribute('data-src')) {
+    //   img.src = img.getAttribute('data-src');
+    //   img.removeAttribute('data-src');
+    // }
 
     // Get our focus values.
     const focus: Focus = {
       x: parseFloat(img.getAttribute('data-focus-x')) || 0,
       y: parseFloat(img.getAttribute('data-focus-y')) || 0,
+      // If we're offered width and height values as data attributes from the user, grab them.
+      width: imageW || parseFloat(img.getAttribute('data-width')) || 0,
+      height: imageH || parseFloat(img.getAttribute('data-height')) || 0,
+      blurhash: img.getAttribute('data-blurhash') || '',
     };
+
+    imageW = focus.width;
+    imageH = focus.height;
 
     // Amount position will be shifted
     let hShift = 50;
@@ -82,25 +83,45 @@ export function start() {
     }
 
     img.style.objectFit = 'cover';
-    img.style.objectPosition = `${hShift}% ${vShift}%`;
-
-    if (img.hasAttribute('data-blurhash')) {
-      if (isLoading && img.src !== TRANSPARENT_PIXEL) {
-        img.setAttribute('data-src', img.src);
-        img.src = TRANSPARENT_PIXEL;
+    if (isLoading && focus.blurhash && imageW && imageH) {
+      if (img.style.background) {
+        return;
       }
-      const blurhash = img.getAttribute('data-blurhash');
-      const pixels = decodeBlurHash(blurhash, imageW, imageH);
+      const blurhash = focus.blurhash;
+      const smallW =
+        imageW > imageH ? 100 : Math.round(100 * (imageW / imageH));
+      const smallH =
+        imageH > imageW ? 100 : Math.round(100 * (imageH / imageW));
+      const pixels = decodeBlurHash(blurhash, smallW, smallH);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      canvas.width = imageW;
-      canvas.height = imageH;
-      const imageData = ctx.createImageData(imageW, imageH);
+      canvas.width = smallW;
+      canvas.height = smallH;
+      const imageData = ctx.createImageData(smallW, smallH);
       imageData.data.set(pixels);
       ctx.putImageData(imageData, 0, 0);
       img.style.background = `url("${canvas.toDataURL(
         'image/jpeg'
       )}") ${hShift}%/${vShift}% no-repeat`;
       img.style.backgroundSize = 'cover';
+      img.style.objectFit = 'cover';
+      img.style.objectPosition = '-100vw'; // Hide the actual image, we're going to be showing the blurhas and fading it out using css!
+    } else if (focus.blurhash) {
+      if (img.style.transition) {
+        return;
+      }
+      // We need a slight delay to make sure the browser has rendered the new image into our element. Any less and it just flashes instead of transitioning.
+      img.style.transition = 'background-image .333s ease-in-out 1s';
+      window.requestAnimationFrame(() => {
+        /* eslint-disable-next-line */
+        img.style.background = `url("${img.getAttribute('data-src') || img.src}") ${hShift}% ${vShift}% / cover no-repeat, ${img.style.background}`;
+        setTimeout(() => {
+          img.style.transition = '';
+          img.style.objectPosition = `${hShift}% ${vShift}%`;
+          img.removeAttribute('data-blurhash');
+        }, 1333);
+      });
+    } else {
+      img.style.objectPosition = `${hShift}% ${vShift}%`;
     }
   }
 
