@@ -1,6 +1,5 @@
 import { encode } from 'blurhash';
 import { Focus } from './FocusedImage';
-import retina from './retina.svg';
 
 /**
  * @param {Focus} focusCoordinates
@@ -37,11 +36,12 @@ const encodeImageToBlurhash = async (image: HTMLImageElement) => {
 };
 
 export class FocusPicker {
+  readonly img: HTMLImageElement;
   private container: HTMLElement;
-  private img: HTMLImageElement;
   private blurhash: string;
   private prevSrc: string;
-  private retina: HTMLImageElement;
+  private retina: HTMLButtonElement;
+  private fitToggle: HTMLButtonElement;
   private onChange?: OnFocusChange | null;
 
   constructor(
@@ -61,14 +61,52 @@ export class FocusPicker {
     this.onChange = options.onChange || null;
 
     // Create retina element
-    this.retina = document.createElement('img');
-    this.retina.src = options.retina || retina;
+    this.retina = document.createElement('button');
+    // this.retina.src = options.retina || retina;
     this.retina.draggable = false;
     Object.assign(this.retina.style, {
       position: 'absolute',
       transform: 'translate(calc(-50% - 0.5px), calc(-50% + 0.5px))',
       pointerEvents: 'none',
+      backgroundColor: 'black',
+      border: '2px solid white',
+      opacity: '0.66',
+      width: '22px',
+      height: '22px',
+      borderRadius: '50%',
     });
+
+    // Create fit toggle
+    this.fitToggle = document.createElement('button');
+    this.fitToggle.innerText = 'Cover';
+    this.fitToggle.draggable = false;
+    this.fitToggle.addEventListener('click', () => {
+      const focus = this.getFocus();
+      this.setFit(focus.fit === 'contain' ? 'cover' : 'contain');
+    });
+    Object.assign(this.fitToggle.style, {
+      position: 'absolute',
+      bottom: '12px',
+      left: '50%',
+      transform: 'translate(-50%, 0)',
+      transition:
+        'background .28s ease-in-out .18s, background-position .18s ease-in-out',
+      backgroundImage:
+        "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' style='fill:white;' viewBox='0 0 448 512'%3E%3Cpath d='M32 32C14.3 32 0 46.3 0 64v96c0 17.7 14.3 32 32 32s32-14.3 32-32V96h64c17.7 0 32-14.3 32-32s-14.3-32-32-32H32zM64 352c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7 14.3 32 32 32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H64V352zM320 32c-17.7 0-32 14.3-32 32s14.3 32 32 32h64v64c0 17.7 14.3 32 32 32s32-14.3 32-32V64c0-17.7-14.3-32-32-32H320zM448 352c0-17.7-14.3-32-32-32s-32 14.3-32 32v64H320c-17.7 0-32 14.3-32 32s14.3 32 32 32h96c17.7 0 32-14.3 32-32V352z'/%3E%3C/svg%3E\"), url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'%3E%3Cpath d='M160 64c0-17.7-14.3-32-32-32s-32 14.3-32 32v64H32c-17.7 0-32 14.3-32 32s14.3 32 32 32h96c17.7 0 32-14.3 32-32V64zM32 320c-17.7 0-32 14.3-32 32s14.3 32 32 32H96v64c0 17.7 14.3 32 32 32s32-14.3 32-32V352c0-17.7-14.3-32-32-32H32zM352 64c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7 14.3 32 32 32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H352V64zM320 320c-17.7 0-32 14.3-32 32v96c0 17.7 14.3 32 32 32s32-14.3 32-32V384h64c17.7 0 32-14.3 32-32s-14.3-32-32-32H320z'/%3E%3C/svg%3E\")",
+      backgroundSize: '14px 14px, 14px 14px, 20px 20px, 20px 20px, 20px 20px',
+      backgroundPosition: 'left 9px center, right 9px center',
+      backgroundRepeat: 'no-repeat',
+      color: 'transparent',
+      border: 'none',
+      backgroundColor: 'white',
+      borderRadius: '18px',
+      width: '58px',
+      height: '24px',
+      cursor: 'pointer',
+      opacity: '0.66',
+    });
+
+    this.setFit('cover');
 
     // Assign styles
     Object.assign(this.img.style, {
@@ -76,6 +114,7 @@ export class FocusPicker {
       cursor: 'crosshair',
       objectFit: 'contain',
     }); // Prevent Android refresh on pull down
+
     Object.assign(this.container.style, {
       position: 'relative',
       display: 'flex',
@@ -96,8 +135,10 @@ export class FocusPicker {
 
     // Attach the retina focal point
     this.container.appendChild(this.retina);
+    this.container.appendChild(this.fitToggle);
 
     // Bind container events
+    this.img.addEventListener('click', this.toggleFit);
     this.img.addEventListener('mousedown', this.startDragging);
     this.img.addEventListener('touchstart', this.startDragging, {
       passive: true,
@@ -134,12 +175,15 @@ export class FocusPicker {
       width: this.img.naturalWidth,
       height: this.img.naturalHeight,
       blurhash: this.blurhash,
+      fit:
+        (this.img.getAttribute('data-fit') as 'cover' | 'contain') || 'cover',
     };
   }
 
   public setFocus(focus: Partial<Focus>) {
-    this.img.setAttribute('data-focus-x', focus.x.toString());
-    this.img.setAttribute('data-focus-y', focus.y.toString());
+    focus.x && this.img.setAttribute('data-focus-x', focus.x.toString());
+    focus.y && this.img.setAttribute('data-focus-y', focus.y.toString());
+    focus.fit && this.img.setAttribute('data-fit', focus.fit);
     this.updateRetinaPosition();
     this.onChange?.(this.getFocus());
   }
@@ -169,6 +213,39 @@ export class FocusPicker {
     }
   };
 
+  private setFit(fit: 'contain' | 'cover') {
+    this.setFocus({ fit });
+    this.container.style.setProperty('--fit', fit);
+    Object.assign(this.fitToggle.style, {
+      backgroundImage: `
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' style='fill:${
+          fit === 'contain' ? 'black' : 'white'
+        };' viewBox='0 0 448 512'%3E%3Cpath d='M32 32C14.3 32 0 46.3 0 64v96c0 17.7 14.3 32 32 32s32-14.3 32-32V96h64c17.7 0 32-14.3 32-32s-14.3-32-32-32H32zM64 352c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7 14.3 32 32 32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H64V352zM320 32c-17.7 0-32 14.3-32 32s14.3 32 32 32h64v64c0 17.7 14.3 32 32 32s32-14.3 32-32V64c0-17.7-14.3-32-32-32H320zM448 352c0-17.7-14.3-32-32-32s-32 14.3-32 32v64H320c-17.7 0-32 14.3-32 32s14.3 32 32 32h96c17.7 0 32-14.3 32-32V352z'/%3E%3C/svg%3E"), 
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' style='fill:${
+          fit === 'contain' ? 'white' : 'black'
+        };' viewBox='0 0 448 512'%3E%3Cpath d='M160 64c0-17.7-14.3-32-32-32s-32 14.3-32 32v64H32c-17.7 0-32 14.3-32 32s14.3 32 32 32h96c17.7 0 32-14.3 32-32V64zM32 320c-17.7 0-32 14.3-32 32s14.3 32 32 32H96v64c0 17.7 14.3 32 32 32s32-14.3 32-32V352c0-17.7-14.3-32-32-32H32zM352 64c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7 14.3 32 32 32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H352V64zM320 320c-17.7 0-32 14.3-32 32v96c0 17.7 14.3 32 32 32s32-14.3 32-32V384h64c17.7 0 32-14.3 32-32s-14.3-32-32-32H320z'/%3E%3C/svg%3E"),
+        radial-gradient(farthest-side at 50%, black, black 100%, transparent 100%),
+        radial-gradient(farthest-side at 50%, black, black 100%, transparent 100%),
+        radial-gradient(farthest-side at 50%, black, black 100%, transparent 100%)
+      `,
+      backgroundPosition: `
+        left 8px center, right 8px center, 
+        ${fit === 'contain' ? 'right' : 'left'} 2px top 2px, 
+        ${fit === 'contain' ? 'right' : 'left'} 5px top 2px, 
+        ${fit === 'contain' ? 'right' : 'left'} 8px top 2px
+      `,
+    });
+  }
+
+  protected isDragging: null | { x: number; y: number } = null;
+  private toggleFit = () => {
+    if (this.isDragging?.x !== 0 || this.isDragging?.y !== 0) {
+      return;
+    }
+    const focus = this.getFocus();
+    this.setFit(focus.fit === 'contain' ? 'cover' : 'contain');
+  };
+
   private startDragging = (e: MouseEvent | TouchEvent) => {
     document.body.addEventListener('mousemove', this.handleMove);
     document.body.addEventListener('touchmove', this.handleMove, {
@@ -183,6 +260,8 @@ export class FocusPicker {
     e.preventDefault();
 
     // Calculate FocusPoint coordinates
+    const delta = (this.isDragging = this.isDragging || { x: 0, y: 0 });
+    const focus = this.getFocus();
     const { width, height, left, top } = this.img.getBoundingClientRect();
     const { naturalWidth, naturalHeight } = this.img;
     const realWidth = height * (naturalWidth / naturalHeight);
@@ -195,6 +274,9 @@ export class FocusPicker {
     const x = (offsetX / width - 0.5) * 2 * (!isWide ? realHeight / height : 1);
     const y = (offsetY / height - 0.5) * -2 * (isWide ? realWidth / width : 1);
 
+    delta.x += x - focus.x;
+    delta.y += y - focus.y;
+
     // Set our new focus value.
     this.setFocus({
       x: Math.min(Math.max(x, -1), 1),
@@ -203,6 +285,9 @@ export class FocusPicker {
   };
 
   private stopDragging = () => {
+    window.requestAnimationFrame(() => {
+      this.isDragging = null;
+    });
     document.body.removeEventListener('mousemove', this.handleMove);
     document.body.removeEventListener('touchmove', this.handleMove);
     document.body.removeEventListener('mouseup', this.stopDragging);

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+<!-- https://picsum.photos/2400/1400?image=1001 -->
 
 <head>
   <meta charset="UTF-8" />
@@ -130,24 +131,15 @@
 
 <body>
   <div class="grid">
-    <img class="focused-image top-left" src="https://picsum.photos/2400/1400?image=1001" alt="" data-focus-x="0.56"
-      data-focus-y="0.46" data-width="2400.00" data-height="1400.00" data-blurhash="L:Lg-B%2Rjay?wkBf6j[XUM{oLf6" />
-    <img class="focused-image top-center" src="https://picsum.photos/2400/1400?image=1001" alt="" data-focus-x="0.56"
-      data-focus-y="0.46" data-width="2400.00" data-height="1400.00" data-blurhash="L:Lg-B%2Rjay?wkBf6j[XUM{oLf6" />
-    <img class="focused-image top-right" src="https://picsum.photos/2400/1400?image=1001" alt="" data-focus-x="0.56"
-      data-focus-y="0.46" data-width="2400.00" data-height="1400.00" data-blurhash="L:Lg-B%2Rjay?wkBf6j[XUM{oLf6" />
-    <img class="focused-image center-left" src="https://picsum.photos/2400/1400?image=1001" alt="" data-focus-x="0.56"
-      data-focus-y="0.46" data-width="2400.00" data-height="1400.00" data-blurhash="L:Lg-B%2Rjay?wkBf6j[XUM{oLf6" />
-    <img class="focused-image center-center" src="https://picsum.photos/2400/1400?image=1001" alt="" data-focus-x="0.56"
-      data-focus-y="0.46" data-width="2400.00" data-height="1400.00" data-blurhash="L:Lg-B%2Rjay?wkBf6j[XUM{oLf6" />
-    <img class="focused-image center-right" src="https://picsum.photos/2400/1400?image=1001" alt="" data-focus-x="0.56"
-      data-focus-y="0.46" data-width="2400.00" data-height="1400.00" data-blurhash="L:Lg-B%2Rjay?wkBf6j[XUM{oLf6" />
-    <img class="focused-image bottom-left" src="https://picsum.photos/2400/1400?image=1001" alt="" data-focus-x="0.56"
-      data-focus-y="0.46" data-width="2400.00" data-height="1400.00" data-blurhash="L:Lg-B%2Rjay?wkBf6j[XUM{oLf6" />
-    <img class="focused-image bottom-center" src="https://picsum.photos/2400/1400?image=1001" alt="" data-focus-x="0.56"
-      data-focus-y="0.46" data-width="2400.00" data-height="1400.00" data-blurhash="L:Lg-B%2Rjay?wkBf6j[XUM{oLf6" />
-    <img class="focused-image bottom-right" src="https://picsum.photos/2400/1400?image=1001" alt="" data-focus-x="0.56"
-      data-focus-y="0.46" data-width="2400.00" data-height="1400.00" data-blurhash="L:Lg-B%2Rjay?wkBf6j[XUM{oLf6" />
+    <img class="focused-image top-left" src="/images/landscape.jpeg" alt="" />
+    <img class="focused-image top-center" src="/images/landscape.jpeg" alt="" />
+    <img class="focused-image top-right" src="/images/landscape.jpeg" alt="" />
+    <img class="focused-image center-left" src="/images/landscape.jpeg" alt="" />
+    <img class="focused-image center-center" src="/images/landscape.jpeg" alt="" />
+    <img class="focused-image center-right" src="/images/landscape.jpeg" alt="" />
+    <img class="focused-image bottom-left" src="/images/landscape.jpeg" alt="" />
+    <img class="focused-image bottom-center" src="/images/landscape.jpeg" alt="" />
+    <img class="focused-image bottom-right" src="/images/landscape.jpeg" alt="" />
   </div>
 
   <div class="image-focus-picker-container">
@@ -163,12 +155,11 @@
       </a>
     </h3>
     <div class="focus-picker">
-      <img id="focus-picker-img" src="https://picsum.photos/2400/1400?image=1001" alt="" data-focus-x="0.5"
-        data-focus-y="0" />
+      <img id="focus-picker-img" src="/images/landscape.jpeg" alt="" data-focus-x="0.5" data-focus-y="0" />
     </div>
     <label class="form-group">
       Update image URL below:
-      <input id="image-src" type="text" value="https://picsum.photos/2400/1400?image=1001" />
+      <input id="image-src" type="text" value="/landscape.026cf9bf.jpeg" />
     </label>
     <label class="form-group">
       Coordinates:
@@ -179,8 +170,12 @@
       <input id="blurhash" type="text" readonly value="" />
     </label>
     <label class="form-group">
-      Data Attributes:
-      <input id="data-attributes" type="text" readonly value='data-focus-x="0.00" data-focus-y="0.00"' />
+      Object Fit:
+      <input id="fit" type="text" readonly value="cover" />
+    </label>
+    <label class="form-group">
+      Data Attribute:
+      <input id="data-attributes" type="text" readonly value='' />
     </label>
   </div>
   <script src="./index.ts"></script>
