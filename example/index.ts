@@ -1,4 +1,4 @@
-import { start, FocusPicker, Focus, encodeFocus } from "../."
+import { start, Focus, FocusPicker, encodeFocus } from "../dist/index.mjs"
 
 // Get our references to elements
 const focusPickerEl = document.getElementById("focus-picker-img") as HTMLImageElement
@@ -10,11 +10,7 @@ const dataAttributes = document.getElementById("data-attributes") as HTMLInputEl
 const focusedImageElements = document.querySelectorAll(".focused-image") as NodeListOf<HTMLImageElement>
 
 // Set our starting focus
-const focus: Focus = { x: 0.56, y: 0.27, width: 2400, height: 1400, blurhash: 'L:Lg-B%2Rjay?wkBf6j[XUM{oLf6', fit: 'cover' };
-for (const img of Array.from(document.querySelectorAll('.focused-image'))) {
-  img.setAttribute('data-focus', (JSON.stringify(focus)));
-}
-
+let firstRun = true;
 function onChange(newFocus: Focus) {
   newFocus.x = parseFloat(newFocus.x.toFixed(2));
   newFocus.y = parseFloat(newFocus.y.toFixed(2));
@@ -26,19 +22,21 @@ function onChange(newFocus: Focus) {
     img.setAttribute('data-focus', encodeFocus(newFocus));
     if (img.src !== imgSrcEl.value) { img.src = imgSrcEl.value; }
   }
+  if (firstRun) {
+    start();
+    firstRun = false;
+  }
 }
 
-// Instantiate our FocusPicker providing starting focus
-// and onChange callback
-const focusPicker = new FocusPicker(focusPickerEl, {
-  focus,
-  onChange,
-});
+// Instantiate our FocusPicker providing onChange callback
+const focusPicker = new FocusPicker(focusPickerEl, { onChange });
+console.log(focusPicker);
+// focusPickerEl.addEventListener("focus-change", (evt: FocusChangeEvent) => {
+//   onChange(evt.detail);
+// });
 
 // Add event listener for updating image sources
 imgSrcEl.addEventListener("input", () => {
-  focusPicker.img.src = imgSrcEl.value
-  if (focusPicker.img.complete) onChange(focusPicker.getFocus());
+  focusPickerEl.src = imgSrcEl.value
 });
 
-start();

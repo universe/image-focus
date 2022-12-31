@@ -21,6 +21,18 @@ export interface Focus {
   blurhash: string | null;
 }
 
+export function stampFocus(focus: Partial<Focus> = {}): Focus {
+  return {
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+    fit: 'cover',
+    blurhash: null,
+    ...focus,
+  };
+}
+
 // V1 encoding for focus attribute. Version number, x * 100, y * 100, width, height, fit (0/1), blurhash
 export type EncodedFocusArr = [number, number, number, number, number, 0 | 1, string];
 
@@ -29,8 +41,8 @@ export function encodeFocus(focus: Focus, version = 1): string {
   return btoa(JSON.stringify([version, Math.round(focus.x * 100), Math.round(focus.y * 100), focus.width, focus.height, focus.fit === 'cover' ? 1 : 0, focus.blurhash])).replaceAll('=', '');
 }
 
-function getEncodedFocus(img: HTMLImageElement): Focus {
-  const [version, x, y, width, height, fit, blurhash] = JSON.parse(atob(img.getAttribute(DATA_ATTR))) as Partial<EncodedFocusArr> || [];
+export function decodeFocus(data: string): Focus {
+  const [version, x, y, width, height, fit, blurhash] = JSON.parse(atob(data)) as Partial<EncodedFocusArr> || [];
   if (version !== 1) { throw new Error('Unknown focus encoding version.'); }
   return {
     x: x / 100 || 0,
@@ -87,7 +99,7 @@ export function start() {
     }
 
     // Get our focus values.
-    const focus = getEncodedFocus(img);
+    const focus = decodeFocus(img.getAttribute(DATA_ATTR))
 
     // Grab our updated width and height values. These may be different than
     // the natural width and height values if the image is not loaded yet.
