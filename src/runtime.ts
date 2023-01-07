@@ -206,15 +206,15 @@ function applyToEvent(evt: Event) {
 }
 
 const observing: WeakSet<HTMLImageElement> = new WeakSet();
-const resizeObserver: ResizeObserver = new ResizeObserver(entries => {
+const resizeObserver: ResizeObserver | null = globalThis.ResizeObserver ? new ResizeObserver(entries => {
   for (const entry of entries) {
     const img = entry.target as HTMLImageElement;
     const { inlineSize: width, blockSize: height } = entry.borderBoxSize[0];
     applyShift(img, width, height);
   }
-});
+}) : null;
 
-const mutationObserver = new MutationObserver(entries => {
+const mutationObserver: MutationObserver | null = globalThis.MutationObserver ? new MutationObserver(entries => {
   for (const entry of entries) {
     switch (entry.type) {
       case 'childList': {
@@ -223,13 +223,13 @@ const mutationObserver = new MutationObserver(entries => {
         ) as HTMLImageElement[]) {
           if (!el || !el?.matches?.(QUERY_SELECTOR) || observing.has(el)) { continue; }
           observing.delete(el);
-          resizeObserver.unobserve(el);
+          resizeObserver?.unobserve(el);
           el.removeEventListener('load', applyToEvent);
         }
         for (const el of Array.from(entry.addedNodes) as HTMLImageElement[]) {
           if (!el || !el?.matches?.(QUERY_SELECTOR) || observing.has(el)) { continue; }
           observing.add(el);
-          resizeObserver.observe(el);
+          resizeObserver?.observe(el);
           el.addEventListener('load', applyToEvent);
           applyToImg(el);
         }
@@ -241,17 +241,17 @@ const mutationObserver = new MutationObserver(entries => {
         applyToImg(el); // Always run this
         if (observing.has(el)) { continue; }
         observing.add(el);
-        resizeObserver.observe(el);
+        resizeObserver?.observe(el);
         el.addEventListener('load', applyToEvent);
         break;
       }
     }
   }
-});
+}) : null;
 
 function run() {
   // Observe our document for changes to image elements with a `data-focus` attribute.
-  mutationObserver.observe(document.body, {
+  mutationObserver?.observe(document.body, {
     subtree: true,
     childList: true,
     attributeFilter: [ DATA_ATTR, 'src' ],

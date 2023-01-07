@@ -3,7 +3,8 @@ import { encode } from 'blurhash';
 import * as Focus from './runtime';
 
 // Utility type for the native custom event we trigger.
-export class FocusChangeEvent extends CustomEvent<Focus.FocusState> {
+const BaseEvent = globalThis.CustomEvent ? CustomEvent : (Event as unknown as typeof CustomEvent);
+export class FocusChangeEvent extends BaseEvent<Focus.FocusState> {
   static type: 'focus-change' = 'focus-change';
   constructor(detail: Focus.FocusState) { super(FocusChangeEvent.type, { detail }); }
 }
