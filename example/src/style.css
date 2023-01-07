@@ -1,0 +1,117 @@
+body {
+  font-family: monospace;
+  height: 100vh;
+  margin: 0;
+}
+
+.grid {
+  display: grid;
+  display: grid;
+  grid-template-columns: 6fr 3fr 2fr;
+  grid-template-rows: 6fr 3fr 2fr;
+  grid-gap: 5px;
+
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+
+  /* needed for safari */
+  height: 100%;
+}
+
+.top-left {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.top-center {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.top-right {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.center-left {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.center-center {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.center-right {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.bottom-left {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+.bottom-center {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.bottom-right {
+  grid-column: 3;
+  grid-row: 3;
+}
+
+.focused-image {
+  /* Just animating transitions */
+  transition: top 0.25s ease-in-out, left 0.25s ease-in-out;
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+  min-width: 100%;
+  max-width: 100%;
+  min-height: 100%;
+  max-height: 100%;
+}
+
+.image-focus-picker-container {
+  position: absolute;
+  top: 30px;
+  right: 30px;
+  padding: 15px;
+  width: 300px;
+
+  background-color: ghostwhite;
+  border-radius: 4px;
+}
+
+#focus-picker-img {
+  max-width: 100%;
+}
+
+.form-group {
+  display: block;
+  margin-top: 12px;
+}
+
+.form-group input {
+  width: 100%;
+  font-size: 14px;
+  font-family: monospace;
+  box-sizing: border-box;
+}
+
+.instruction {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0;
+}
+
+.github-link {
+  display: flex;
+}

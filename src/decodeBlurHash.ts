@@ -48,7 +48,7 @@ export function decodeBlurHash(
   blurHash: string,
   width: number,
   height: number,
-  punch?: number
+  punch?: number,
 ): Uint8ClampedArray {
   const sizeFlag = decode83(blurHash, 0, 1);
   const numX = (sizeFlag % 9) + 1;

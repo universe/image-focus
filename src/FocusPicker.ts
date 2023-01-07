@@ -1,22 +1,37 @@
 import { encode } from 'blurhash';
-import { Focus, stampFocus } from './FocusedImage';
 
-/**
- * @param {Focus} focusCoordinates
- * @returns {void}
- */
-export type OnFocusChange = (focusCoordinates: Focus) => void;
-export interface FocusPickerOptions {
-  onChange?: OnFocusChange; // Callback that receives FocusCoordinates on change
-  focus?: Focus; // Focus to initialize with
+import * as Focus from './runtime';
+
+// Utility type for the native custom event we trigger.
+export class FocusChangeEvent extends CustomEvent<Focus.FocusState> {
+  static type: 'focus-change' = 'focus-change';
+  constructor(detail: Focus.FocusState) { super(FocusChangeEvent.type, { detail }); }
 }
 
+// Augment the global HTML event map for TS support in addEventListener etc.
+declare global {
+  interface HTMLElementEventMap {
+    [FocusChangeEvent.type]: FocusChangeEvent
+  }
+}
+
+// Programmatic callback function type.
+export type OnFocusChange = (focusCoordinates: Focus.FocusState) => void;
+
+// Init options for the FocusPicker class.
+export interface FocusPickerOptions {
+  onChange?: OnFocusChange; // Callback that receives FocusCoordinates on change
+  focus?: Focus.FocusState; // Focus to initialize with
+}
+
+// Runtime type safety utility methods.
 const isNumber = (val: unknown): val is number => typeof val === 'number';
 const isString = (val: unknown): val is string => typeof val === 'string';
 const isNull = (val: unknown): val is null => val === null;
 const isFit = (val: unknown): val is 'contain' | 'cover' => val === 'contain' || val === 'cover';
 
-const encodeImageToBlurhash = async (image: HTMLImageElement) => {
+// Given an image element, convert it's contents to a blurhash string.
+const encodeImageToBlurhash = async(image: HTMLImageElement) => {
   const size = 200;
   const canvas = document.createElement('canvas');
   const width = image.naturalWidth;
@@ -46,7 +61,7 @@ function getFit(img: HTMLImageElement): 'contain' | 'cover' {
 
 export class FocusPicker {
   readonly img: HTMLImageElement;
-  private focus: Focus = stampFocus();
+  private focus: Focus.FocusState = Focus.stamp();
   private retina: HTMLButtonElement;
   private fitToggle: HTMLButtonElement;
   private mutationObserver: MutationObserver;
@@ -54,11 +69,14 @@ export class FocusPicker {
 
   constructor(
     imageNode: HTMLImageElement,
-    options: Partial<FocusPickerOptions> = {}
+    options: Partial<FocusPickerOptions> = {},
   ) {
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     if ((imageNode as any).__FOCUS_PICKER__) {
+      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
       return (imageNode as any).__FOCUS_PICKER__ as FocusPicker;
     }
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     (imageNode as any).__FOCUS_PICKER__ = this;
 
     // Save our change callback if provided.
@@ -74,8 +92,8 @@ export class FocusPicker {
     this.focus.y = options.focus?.y || parseFloat(this.img.getAttribute('data-focus-y')) || this.focus.y;
     this.focus.fit = options.focus?.fit || getFit(this.img);
     this.focus.blurhash = options.focus?.blurhash || this.img.getAttribute('data-focus-blurhash') || null;
-    this.focus.width = options.focus?.width || this.img.naturalWidth || this.focus.width
-    this.focus.height = options.focus?.height || this.img.naturalHeight || this.focus.height
+    this.focus.width = options.focus?.width || this.img.naturalWidth || this.focus.width;
+    this.focus.height = options.focus?.height || this.img.naturalHeight || this.focus.height;
 
     // Create the retina element
     this.retina = document.createElement('button');
@@ -109,6 +127,7 @@ export class FocusPicker {
       transition:
         'background .28s ease-in-out .18s, background-position .18s ease-in-out',
       backgroundImage:
+        /* eslint-disable-next-line max-len */
         "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' style='fill:white;' viewBox='0 0 448 512'%3E%3Cpath d='M32 32C14.3 32 0 46.3 0 64v96c0 17.7 14.3 32 32 32s32-14.3 32-32V96h64c17.7 0 32-14.3 32-32s-14.3-32-32-32H32zM64 352c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7 14.3 32 32 32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H64V352zM320 32c-17.7 0-32 14.3-32 32s14.3 32 32 32h64v64c0 17.7 14.3 32 32 32s32-14.3 32-32V64c0-17.7-14.3-32-32-32H320zM448 352c0-17.7-14.3-32-32-32s-32 14.3-32 32v64H320c-17.7 0-32 14.3-32 32s14.3 32 32 32h96c17.7 0 32-14.3 32-32V352z'/%3E%3C/svg%3E\"), url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'%3E%3Cpath d='M160 64c0-17.7-14.3-32-32-32s-32 14.3-32 32v64H32c-17.7 0-32 14.3-32 32s14.3 32 32 32h96c17.7 0 32-14.3 32-32V64zM32 320c-17.7 0-32 14.3-32 32s14.3 32 32 32H96v64c0 17.7 14.3 32 32 32s32-14.3 32-32V352c0-17.7-14.3-32-32-32H32zM352 64c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7 14.3 32 32 32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H352V64zM320 320c-17.7 0-32 14.3-32 32v96c0 17.7 14.3 32 32 32s32-14.3 32-32V384h64c17.7 0 32-14.3 32-32s-14.3-32-32-32H320z'/%3E%3C/svg%3E\")",
       backgroundSize: '14px 14px, 14px 14px, 20px 20px, 20px 20px, 20px 20px',
       backgroundPosition: 'left 9px center, right 9px center',
@@ -182,11 +201,11 @@ export class FocusPicker {
     this.stopDragging();
   }
 
-  public getFocus(): Focus {
+  public getFocus(): Focus.FocusState {
     return JSON.parse(JSON.stringify(this.focus));
   }
 
-  public setFocus(focus: Partial<Focus>, options?: { silent?: boolean }) {
+  public setFocus(focus: Partial<Focus.FocusState>, options?: { silent?: boolean }) {
     let changed = false;
     if (isNumber(focus.x) && focus.x !== this.focus.x) {
       changed = true;
@@ -221,6 +240,7 @@ export class FocusPicker {
 
     // Must be outside of change check for setting the initial load style.
     Object.assign(this.fitToggle.style, {
+      /* eslint-disable max-len */
       backgroundImage: `
         url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' style='fill:${this.focus.fit === 'contain' ? 'black' : 'white'
         };' viewBox='0 0 448 512'%3E%3Cpath d='M32 32C14.3 32 0 46.3 0 64v96c0 17.7 14.3 32 32 32s32-14.3 32-32V96h64c17.7 0 32-14.3 32-32s-14.3-32-32-32H32zM64 352c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7 14.3 32 32 32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H64V352zM320 32c-17.7 0-32 14.3-32 32s14.3 32 32 32h64v64c0 17.7 14.3 32 32 32s32-14.3 32-32V64c0-17.7-14.3-32-32-32H320zM448 352c0-17.7-14.3-32-32-32s-32 14.3-32 32v64H320c-17.7 0-32 14.3-32 32s14.3 32 32 32h96c17.7 0 32-14.3 32-32V352z'/%3E%3C/svg%3E"), 
@@ -230,6 +250,7 @@ export class FocusPicker {
         radial-gradient(farthest-side at 50%, black, black 100%, transparent 100%),
         radial-gradient(farthest-side at 50%, black, black 100%, transparent 100%)
       `,
+      /* eslint-enable max-len */
       backgroundPosition: `
         left 8px center, right 8px center, 
         ${this.focus.fit === 'contain' ? 'right' : 'left'} 2px top 2px, 
@@ -276,7 +297,7 @@ export class FocusPicker {
     document.body.addEventListener('mousemove', this.handleMove);
     document.body.addEventListener('touchmove', this.handleMove, {
       passive: true,
-    } as any);
+    });
     document.body.addEventListener('mouseup', this.stopDragging);
     document.body.addEventListener('touchend', this.stopDragging);
     this.handleMove(e);
@@ -317,4 +338,28 @@ export class FocusPicker {
     document.body.removeEventListener('mouseup', this.stopDragging);
     document.body.removeEventListener('touchend', this.stopDragging);
   };
+
+  // Live collection of all images will update automatically as DOM is changed.
+  private static IMAGES: HTMLCollectionOf<HTMLImageElement> | null = null;
+  private static run() {
+    FocusPicker.IMAGES || (FocusPicker.IMAGES = document.getElementsByTagName('img'));
+
+    // For each image, if it is a focus picker, ensure it is instantiated, and update the retna position.
+    for (let i = 0; i < FocusPicker.IMAGES.length; i++) {
+      const img = FocusPicker.IMAGES[i];
+      if (!img.hasAttribute('data-focus-picker')) { continue; }
+      /* eslint-disable-next-line  @typescript-eslint/no-explicit-any */
+      (((img as any).__FOCUS_PICKER__ as FocusPicker) || new FocusPicker(img, {
+        onChange: (focus) => img.dispatchEvent(new FocusChangeEvent(focus)),
+      })).updateRetinaPosition();
+    }
+    window.requestAnimationFrame(FocusPicker.run);
+  }
+
+  public static watch() {
+    // Call init to start the run loop once the DOM is ready. 
+    (document.readyState === "complete" || document.readyState === "interactive")
+      ? FocusPicker.run()
+      : document.addEventListener("DOMContentLoaded", FocusPicker.run);
+  }
 }
