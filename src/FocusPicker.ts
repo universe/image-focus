@@ -32,7 +32,7 @@ const isNull = (val: unknown): val is null => val === null;
 const isFit = (val: unknown): val is 'contain' | 'cover' => val === 'contain' || val === 'cover';
 
 // Given an image element, convert it's contents to a blurhash string.
-const encodeImageToBlurhash = async(image: HTMLImageElement) => {
+const encodeImageToBlurhash = async (image: HTMLImageElement) => {
   const size = 200;
   const canvas = document.createElement('canvas');
   const width = image.naturalWidth;
@@ -65,7 +65,6 @@ export class FocusPicker {
   private focus: Focus.FocusState = Focus.stamp();
   private retina: HTMLButtonElement;
   private fitToggle: HTMLButtonElement;
-  private mutationObserver: MutationObserver;
   private onChange?: OnFocusChange | null;
 
   constructor(
@@ -98,6 +97,7 @@ export class FocusPicker {
 
     // Create the retina element
     this.retina = document.createElement('button');
+    this.retina.classList.add('image-focus__retina');
     this.retina.draggable = false;
     Object.assign(this.retina.style, {
       position: 'absolute',
@@ -118,13 +118,14 @@ export class FocusPicker {
 
     // Create fit toggle
     this.fitToggle = document.createElement('button');
+    this.fitToggle.classList.add('image-focus__fit-toggle');
     this.fitToggle.innerText = 'Cover';
     this.fitToggle.draggable = false;
     Object.assign(this.fitToggle.style, {
       position: 'absolute',
-      top: '-100px',
+      top: '100%',
       left: '-100px',
-      transform: 'translate3d(-50%, -38px, 0)',
+      transform: 'translate3d(-50%, calc(-100% - 8px), 0px)',
       transition:
         'background .28s ease-in-out .18s, background-position .18s ease-in-out',
       backgroundImage:
@@ -156,7 +157,7 @@ export class FocusPicker {
   }
 
   public isEnabled(): boolean {
-    return document.body.contains(this.retina);
+    return this.img.parentElement.contains(this.retina);
   }
 
   public enable() {
@@ -165,16 +166,18 @@ export class FocusPicker {
     }
 
     // Attach the retina focal point
-    document.body.appendChild(this.retina);
-    document.body.appendChild(this.fitToggle);
+    this.img.parentElement.appendChild(this.retina);
+    this.img.parentElement.appendChild(this.fitToggle);
 
     // Bind interaction events
     this.img.addEventListener('mousedown', this.startDragging);
     this.img.addEventListener('touchstart', this.startDragging, { passive: true });
-    this.fitToggle.addEventListener('click', this.toggleFit.bind(this));
+    this.toggleFit = this.toggleFit.bind(this);
+    this.fitToggle.addEventListener('click', this.toggleFit);
 
     // Watch for new images being loaded and ensure our blurhash value
-    this.img.addEventListener('load', this.onLoad.bind(this));
+    this.onLoad = this.onLoad.bind(this);
+    this.img.addEventListener('load', this.onLoad);
     if (this.img.complete) { this.onLoad(); }
   }
 
@@ -190,16 +193,13 @@ export class FocusPicker {
   }
 
   public disable() {
-    if (!this.isEnabled()) {
-      return;
-    }
-    document.body.removeChild(this.retina);
-    document.body.removeChild(this.fitToggle);
     this.img.removeEventListener('mousedown', this.startDragging);
     this.img.removeEventListener('touchstart', this.startDragging);
     this.img.removeEventListener('load', this.onLoad);
     this.fitToggle.removeEventListener('click', this.toggleFit);
     this.stopDragging();
+    this.img.parentElement.contains(this.retina) && this.img.parentElement.removeChild(this.retina);
+    this.img.parentElement.contains(this.fitToggle) && this.img.parentElement.removeChild(this.fitToggle);
   }
 
   public getFocus(): Focus.FocusState {
@@ -281,10 +281,10 @@ export class FocusPicker {
           ? height * (this.focus.y / -2 + 0.5)
           : height * (this.focus.y / -2 + 0.5) * (realHeight / height) +
           (height - realHeight) / 2;
-        this.retina.style.top = `${offsetY + top}px`;
-        this.retina.style.left = `${offsetX + left}px`;
-        this.fitToggle.style.top = `${top + (!isWide ? height : height * (realHeight / height) + (height - realHeight) / 2)}px`;
-        this.fitToggle.style.left = `${left + (width / 2)}px`;
+        this.retina.style.top = `${offsetY}px`;
+        this.retina.style.left = `${offsetX}px`;
+        // this.fitToggle.style.top = `${(!isWide ? height : height * (realHeight / height) + (height - realHeight) / 2)}px`;
+        this.fitToggle.style.left = `${(width / 2)}px`;
       });
     }
   };
@@ -295,12 +295,12 @@ export class FocusPicker {
   };
 
   private startDragging = (e: MouseEvent | TouchEvent) => {
-    document.body.addEventListener('mousemove', this.handleMove);
-    document.body.addEventListener('touchmove', this.handleMove, {
+    this.img.parentElement.addEventListener('mousemove', this.handleMove);
+    this.img.parentElement.addEventListener('touchmove', this.handleMove, {
       passive: true,
     });
-    document.body.addEventListener('mouseup', this.stopDragging);
-    document.body.addEventListener('touchend', this.stopDragging);
+    this.img.parentElement.addEventListener('mouseup', this.stopDragging);
+    this.img.parentElement.addEventListener('touchend', this.stopDragging);
     this.handleMove(e);
   };
 
@@ -334,10 +334,10 @@ export class FocusPicker {
 
   private stopDragging = () => {
     window.requestAnimationFrame(() => this.dragDelta = null);
-    document.body.removeEventListener('mousemove', this.handleMove);
-    document.body.removeEventListener('touchmove', this.handleMove);
-    document.body.removeEventListener('mouseup', this.stopDragging);
-    document.body.removeEventListener('touchend', this.stopDragging);
+    this.img.parentElement.removeEventListener('mousemove', this.handleMove);
+    this.img.parentElement.removeEventListener('touchmove', this.handleMove);
+    this.img.parentElement.removeEventListener('mouseup', this.stopDragging);
+    this.img.parentElement.removeEventListener('touchend', this.stopDragging);
   };
 
   // Live collection of all images will update automatically as DOM is changed.
@@ -352,7 +352,7 @@ export class FocusPicker {
       /* eslint-disable-next-line  @typescript-eslint/no-explicit-any */
       (((img as any).__FOCUS_PICKER__ as FocusPicker) || new FocusPicker(img, {
         onChange: (focus) => img.dispatchEvent(new FocusChangeEvent(focus)),
-      })).updateRetinaPosition();
+      }))
     }
     window.requestAnimationFrame(FocusPicker.run);
   }
