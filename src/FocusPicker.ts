@@ -32,7 +32,7 @@ const isNull = (val: unknown): val is null => val === null;
 const isFit = (val: unknown): val is 'contain' | 'cover' => val === 'contain' || val === 'cover';
 
 // Given an image element, convert it's contents to a blurhash string.
-const encodeImageToBlurhash = async (image: HTMLImageElement) => {
+const encodeImageToBlurhash = async(image: HTMLImageElement) => {
   const size = 200;
   const canvas = document.createElement('canvas');
   const width = image.naturalWidth;
@@ -187,7 +187,7 @@ export class FocusPicker {
     if (!this.img || (this.prevSrc === this.img.src && this.focus.blurhash)) { return; }
     this.focus.width = this.img.naturalWidth;
     this.focus.height = this.img.naturalHeight;
-    this.focus.blurhash = await encodeImageToBlurhash(this.img);
+    this.focus.blurhash = this.focus.blurhash || await encodeImageToBlurhash(this.img);
     this.prevSrc = this.img.src;
     this.setFocus(this.focus, { silent: false });
   }
@@ -269,7 +269,7 @@ export class FocusPicker {
     if (!this.retinaAnimationFrame) {
       this.retinaAnimationFrame = window.requestAnimationFrame(() => {
         this.retinaAnimationFrame = null;
-        const { width, height, top, left } = this.img.getBoundingClientRect();
+        const { width, height } = this.img.getBoundingClientRect();
         const realWidth = height * (this.focus.width / this.focus.height);
         const realHeight = width * (this.focus.height / this.focus.width);
         const isWide = this.focus.width / width > this.focus.height / height;
@@ -352,7 +352,7 @@ export class FocusPicker {
       /* eslint-disable-next-line  @typescript-eslint/no-explicit-any */
       (((img as any).__FOCUS_PICKER__ as FocusPicker) || new FocusPicker(img, {
         onChange: (focus) => img.dispatchEvent(new FocusChangeEvent(focus)),
-      }))
+      }));
     }
     window.requestAnimationFrame(FocusPicker.run);
   }
